@@ -1,0 +1,664 @@
+/*
+ * MAZE Game Framework
+ * Written by Dr. Dhanyu Amarasinghe Spring 2018
+ */
+
+#include <string.h>
+#include <Maze.h>
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <Timer.h>
+#include <player.h>
+#include <path.h>
+#define V 8
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
+#include <stdlib.h>
+#include <Enemies.h>
+#include <CommonThings.h>
+#include <wall.h>
+#include <math.h>
+
+/* GLUT callback Handlers */
+
+using namespace std;
+
+
+
+Maze *M = new Maze(10);                         // Set Maze grid size
+Player *P = new Player();                       // create player
+
+
+//wall W1[100];                                    // wall with number of bricks
+//wall W2[100];                                    // wall with number of bricks
+wall W[100];
+
+int W1_size = 3;
+int W2_size = 3;
+Enemies E[4];                                  // create number of enemies
+Timer *T0 = new Timer();                        // animation timer
+
+float wWidth, wHeight;                          // display window width and Height
+float xPos,yPos;                                // Viewpoar mapping
+float unitWidth= (float)2/10;
+string node[10][10];
+float FPS = 60.0;                                 // control render time
+int i,time_now,time_prev;                         // timers
+loc tOGLPos;
+loc n1,n2,n3,n4,n5,n6;                          //Nodes
+typedef pair<int, int> MyPairType;
+struct CompareSecond
+{
+    bool operator()(const MyPairType& left, const MyPairType& right) const
+    {
+        return left.second < right.second;
+    }
+};
+
+
+float FPS = 60.0;                                 // control render time
+int time_now,time_prev;                           // timers
+void display(void);                             // Main Display : this runs in a loop
+
+void resize(int width, int height)              // resizing case on the window
+{
+    wWidth = width;
+    wHeight = height;
+
+    if(width<=height)
+        glViewport(0,(GLsizei) (height-width)/2,(GLsizei) width,(GLsizei) width);
+    else
+        glViewport((GLsizei) (width-height)/2 ,0 ,(GLsizei) height,(GLsizei) height);
+}
+
+void init()
+{
+    glEnable(GL_COLOR_MATERIAL);
+
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POLYGON_SMOOTH);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glClearColor(0.0,0.0,0.0,0.0);
+    gluOrtho2D(0, wWidth, 0, wHeight);
+
+    T0->Start();                                        // set timer to 0
+
+    glEnable(GL_BLEND);                                 //display images with transparent
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    P->isPlayerVisible=true;
+    M->loadBackgroundImage("images/bak.jpg");           // Load maze background image
+    M->loadChestImage("images/chest.png");               // load chest image
+    M->placeChest(3,3);                                 // place chest in a grid
+
+    M->loadBushImage("images/bush.png");               // load BUSH image
+    M->placeBush(3,7);                                 // place BUSH in a grid
+
+    M->loadLeftArrowImage("images/LeftArrow.png");
+    M->placeLeftArrow(7,2);
+
+    M->loadRightArrowImage("images/RightArrow.png");
+    M->placeRightArrow(9,2);
+
+    M->loadUpArrowImage("images/upArrow.png");
+    M->placeUpArrow(8,3);
+
+    M->loadDownArrowImage("images/downArrow.png");
+    M->placeDownArrow(8,1);
+
+    M->loadSetOfArrowsImage("images/arrwset.png");      // load set of arrows image
+    M->placeStArrws(5,3);                               // place set of arrows
+
+    P->initPlayer(M->getGridSize(),6,"images/p.png");   // initialize player pass grid size,image and number of frames
+    P->loadArrowImage("images/arr.png");                // Load arrow image
+    P->placePlayer(5,5);                                // Place player
+
+    M->loadGameOverImage("images/game_over.jpg");
+    //W1.setWallSize(W1_size);
+    //W2.setWallSize(W2_size);
+   /* for(int i=1; i< W1_size+1;i++)
+    {
+
+
+                cout<<"M->getGridSize(): "<<M->getGridSize();
+            W1[i].wallInit(M->getGridSize(),"images/wall.png");// Load walls
+            W1[i].placeWall(i,5);                              // place each brick
+
+
+    }*/
+
+
+      /*for(int i=7; i< M->getGridSize();i++)
+    {
+
+                cout<<"M->getGridSize(): "<<M->getGridSize();
+            W2[i].wallInit(M->getGridSize(),"images/wall.png");// Load walls
+            W2[i].placeWall(i,5);                              // place each brick
+
+
+    }*/
+    for(int i=0; i< 26;i++)
+    {
+         W[i].wallInit(M->getGridSize(),"images/wall.png");// Load walls
+
+    }
+    W[0].placeWall(0,9);
+    W[1].placeWall(2,8);
+    W[2].placeWall(3,8);
+    W[3].placeWall(6,8);
+    W[4].placeWall(7,8);
+    W[5].placeWall(0,7);
+    W[6].placeWall(9,7);
+    W[7].placeWall(4,6);
+    W[8].placeWall(5,6);
+    W[9].placeWall(1,4);
+    W[10].placeWall(2,4);
+    W[11].placeWall(3,4);
+    W[12].placeWall(6,4);
+    W[13].placeWall(7,4);
+    W[14].placeWall(8,4);
+    W[15].placeWall(3,2);
+    W[16].placeWall(4,2);
+    W[17].placeWall(6,2);
+    W[18].placeWall(8,2);
+    W[19].placeWall(9,2);
+    W[20].placeWall(0,1);
+    W[21].placeWall(1,1);
+    W[22].placeWall(6,1);
+    W[23].placeWall(3,0);
+    W[24].placeWall(8,0);
+    W[25].placeWall(9,9);
+
+
+
+
+    for(int i=0; i<4;i++)
+    {
+        E[i].initEnm(M->getGridSize(),4,"images/e.png"); //Load enemy image
+        E[i].placeEnemy(float(rand()%(M->getGridSize())),float(rand()%(M->getGridSize())));
+        //place enemies random x,y
+    }
+    P->numberOfWallsN = 26;
+}
+
+void display(void)
+{
+
+    time_now = glutGet(GLUT_ELAPSED_TIME);
+    if((time_now - time_prev) > 1000/FPS)
+    {
+
+  glClear (GL_COLOR_BUFFER_BIT);        // clear display screen
+
+        glPushMatrix();
+         M->drawBackground();
+        glPopMatrix();
+
+
+        for(int i=0; i<26;i++)
+        {
+
+           W[i].drawWall();
+
+        }
+        //W[21].drawWall();
+         /*for(int i=7; i<M->getGridSize();i++)
+        {
+
+
+           W[i].drawWall();
+        }*/
+
+        glPushMatrix();
+            M->drawGrid();
+        glPopMatrix();
+
+        glPushMatrix();
+            P->drawplayer();
+        glPopMatrix();
+
+        for(int i=0; i<10;i++)
+        {
+        E[i].drawEnemy();
+        }
+
+        glPushMatrix();
+            P->drawArrow();
+        glPopMatrix();
+
+         glPushMatrix();
+           M->drawChest();
+        glPopMatrix();
+
+        glPushMatrix();
+           M->drawBush();
+        glPopMatrix();
+
+        glPushMatrix();
+        M->drawLeftArrow();
+        glPopMatrix();
+
+        glPushMatrix();
+        M->drawRightArrow();
+        glPopMatrix();
+
+        glPushMatrix();
+        M->drawUpArrow();
+        glPopMatrix();
+
+        glPushMatrix();
+        M->drawDownArrow();
+        glPopMatrix();
+
+        glPushMatrix();
+           M->drawArrows();
+        glPopMatrix();
+
+
+        //glPushMatrix();
+         //  M->drawGameOverImg();
+        //glPopMatrix();
+
+    glutSwapBuffers();
+    time_now = time_prev;
+    }  //End of if case
+}
+
+
+
+
+void key(unsigned char key, int x, int y)
+{ //bool collide = false;
+    switch (key)
+    {
+        case ' ':
+          // if(!M->liveSetOfArrws)      // if setof arrows were picked by player
+            //for(int i =0; i<26; i++){
+                 if(P->getPlayerLoc().x == M->GetStArrwsLoc().x && P->getPlayerLoc().y == M->GetStArrwsLoc().y)
+           {
+               M->liveSetOfArrws = false;
+               //collide = true;
+
+           }
+           if(!M->liveSetOfArrws){
+             P->shootArrow();
+           }
+           // }
+
+
+
+             P->CheckFireCollision(W);
+        break;
+        case 27 :                       // esc key to exit
+        case 'q':
+            exit(0);
+            break;
+    }
+
+    glutPostRedisplay();
+}
+
+loc getConvertertedValue(int x, int y)
+{
+       loc val;
+
+        x+=1;
+        y+=1;
+       val.x = -1-unitWidth/2+(unitWidth)*x;
+       val.y = -1-unitWidth/2+(unitWidth)*y;
+       return val;
+}
+
+
+loc GetOGLPos(int x, int y)
+{
+    GLint viewport[4];
+    GLdouble modelview[16];
+    GLdouble projection[16];
+    GLfloat winX, winY, winZ;
+    GLdouble posX, posY, posZ;
+
+    glGetDoublev( GL_MODELVIEW_MATRIX, modelview );
+    glGetDoublev( GL_PROJECTION_MATRIX, projection );
+    glGetIntegerv( GL_VIEWPORT, viewport );
+
+    winX = (float)x;
+    winY = (float)viewport[3] - (float)y;
+    glReadPixels( x, int(winY), 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
+
+    gluUnProject( winX, winY, winZ, modelview, projection, viewport, &posX, &posY, &posZ);
+
+
+    xPos =posX ;
+
+    yPos =posY ;
+tOGLPos.x=ceil(10*xPos)/10;
+tOGLPos.y=floor(10*yPos)/10;
+/*cout<<"before";
+cout<<"\n "<<xPos<<"  "<<yPos;
+cout<<"after";
+cout<<"\n "<<ceil(10*xPos)/10<<"  "<<floor(10*yPos)/10;
+cout<<"now";*/
+return tOGLPos;
+}
+
+ void idle(void)
+{
+
+    //Your Code here
+
+    glutPostRedisplay();
+}
+
+
+void mouse(int btn, int state, int x, int y){
+
+loc convertedValueLeft=getConvertertedValue(M->GetLeftArrowLoc().x,M->GetLeftArrowLoc().y);
+loc convertedValueRight=getConvertertedValue(M->GetRightArrowLoc().x,M->GetRightArrowLoc().y);
+loc convertedValueUp=getConvertertedValue(M->GetUpArrowLoc().x,M->GetUpArrowLoc().y);
+loc convertedValueDown=getConvertertedValue(M->GetDownArrowLoc().x,M->GetDownArrowLoc().y);
+cout<<"\n\n\n\n\n left conv x "<<convertedValueLeft.x<<"  conv y "<<convertedValueLeft.y;
+cout<<"\n left conv x +0.1 "<<(convertedValueLeft.x+0.1)<<"  conv y "<<(convertedValueLeft.y-0.1);
+cout<<"\n right conv x "<<convertedValueRight.x<<"  conv y "<<convertedValueRight.y;
+cout<<"\n right conv x +0.1 "<<(convertedValueRight.x+0.1)<<"  conv y "<<(convertedValueRight.y-0.1);
+cout<<"\n Up conv x "<<convertedValueUp.x<<"  conv y "<<convertedValueUp.y;
+cout<<"\n Up conv x +0.1 "<<(convertedValueUp.x+0.1)<<"  conv y "<<(convertedValueUp.y-0.1);
+cout<<"\n Down conv x "<<convertedValueDown.x<<"  conv y "<<convertedValueDown.y;
+cout<<"\n Down conv x +0.1 "<<(convertedValueDown.x+0.1)<<"  conv y "<<(convertedValueDown.y-0.1);
+
+switch(btn){
+    case GLUT_LEFT_BUTTON:
+        if(state==GLUT_DOWN){
+            loc tOGLPos=GetOGLPos(x,y);
+            cout<<"\n toglpos "<<tOGLPos.x<<"  "<<tOGLPos.y;
+            if((tOGLPos.x>=convertedValueLeft.x&&tOGLPos.x<=(convertedValueLeft.x+0.11))&&(tOGLPos.y<=convertedValueLeft.y&&tOGLPos.y>=(convertedValueLeft.y-0.11)))
+            {
+                P->movePlayer("left");
+            }
+            else if((tOGLPos.x>=convertedValueRight.x&&tOGLPos.x<=(convertedValueRight.x+0.11))&&(tOGLPos.y<=convertedValueRight.y&&tOGLPos.y>=(convertedValueRight.y-0.11)))
+            {
+                P->movePlayer("right");
+            }
+            else if((tOGLPos.x>=convertedValueUp.x&&tOGLPos.x<=(convertedValueUp.x+0.11))&&(tOGLPos.y<=convertedValueUp.y&&tOGLPos.y>=(convertedValueUp.y-0.11)))
+            {
+                P->movePlayer("up");
+            }
+            else if((tOGLPos.x>=convertedValueDown.x&&tOGLPos.x<=(convertedValueDown.x+0.11))&&(tOGLPos.y<=convertedValueDown.y&&tOGLPos.y>=(convertedValueDown.y-0.11)))
+            {
+            P->movePlayer("down");
+            }
+        }
+    break;
+
+        /*case GLUT_RIGHT_BUTTON:
+
+            if(state==GLUT_DOWN){
+                cout<<"right click";
+                GetOGLPos(x,y);
+                P->movePlayer("right");
+            }
+        break;
+*/
+        /*case GLUT_DOWN:
+
+            if(state==GLUT_DOWN){
+                cout<<"right click";
+                GetOGLPos(x,y);
+                P->movePlayer("right");
+            }
+        break;
+
+        case GLUT_RIGHT_BUTTON:
+
+            if(state==GLUT_DOWN){
+                cout<<"right click";
+                GetOGLPos(x,y);
+                P->movePlayer("right");
+            }
+        break;*/
+        }
+     glutPostRedisplay();
+};
+
+int distance(int x1,int y1,int x2,int y2)
+{
+return sqrt(pow(x2-x1,2)+pow(y2-y1,2)*1.0);
+}
+
+//std::pair<size_t, size_t>
+
+loc find_position( const string ( &node )[10][10], string value )
+{
+    size_t row = 0;
+    size_t col = 0;
+
+    for ( ; row < 10; row++ )
+    {
+        col = 0;
+        while ( col < 10 && node[row][col] != value ) col++;
+        if ( col != 10 ) break;
+    }
+
+    loc n;
+    n.x=col;
+    n.y=row;
+    return n;
+
+    //return { row, col };
+}
+
+
+
+
+int getShortestPath(int i)
+{
+   int dist=distance(E[i].getEnemyLoc().x,E[i].getEnemyLoc().y,P->getPlayerLoc().x,P->getPlayerLoc().y);
+
+/*string node[10][10]={{"n68","n69","n70","na","n71","n72","n73","n74","na","n75"},
+                     {"na","na","n61","n62","n63","n64","na","n65","n66","n67"},
+                     {"n56","n57","n58","na","na","n59","na","n60","na","na"},
+                     {"n46","n47","n48","n49","n50","n51","n52","n53","n54","n55"},
+                     {"n41","na","na","na","n43","n44","na","na","na","n45"},
+                     {"n31","n32","n33","n34","n35","n36","n37","n38","n39","n40"},
+                     {"n23","n24","n25","n26","na","na","n27","n28","n29","n30"},
+                     {"na","n15","n16","n17","n18","n19","n20","n21","n22","na"},
+                     {"n9","n10","na","na","n11","n12","na","na","n13","n14"},
+                     {"na","n1","n2","n3","n4","n5","n6","n7","n8","na"}
+					 };
+
+loc n1=find_position(node,"n6");
+cout<<"row is "<<n1.x<<"and column is "<<n1.y;
+n1.x=0,n1.y=6,n2.x=0,n2.y=4,n3.x=4,n3.y=6,n4.x=4,n4.y=4,n5.x=6,n5.y=6,n6.x=6,n6.y=4;
+int w1=distance(E[i].getEnemyLoc().x,E[i].getEnemyLoc().y,(int)n1.x,(int)n1.y);
+int w2=distance(E[i].getEnemyLoc().x,E[i].getEnemyLoc().y,(int)n2.x,(int)n2.y);
+int w3=distance((int)n1.x,(int)n1.y,(int)n2.x,(int)n2.y);
+int w4=distance((int)n1.x,(int)n1.y,(int)n3.x,(int)n3.y);
+int w5=distance((int)n2.x,(int)n2.y,(int)n4.x,(int)n4.y);
+int w6=distance((int)n3.x,(int)n3.y,(int)n4.x,(int)n4.y);
+int w7=distance((int)n3.x,(int)n3.y,(int)n5.x,(int)n5.y);
+int w8=distance((int)n3.x,(int)n3.y,(int)n6.x,(int)n6.y);
+int w9=distance((int)n4.x,(int)n4.y,(int)n5.x,(int)n5.y);
+int w10=distance((int)n4.x,(int)n4.y,(int)n6.x,(int)n6.y);
+int w11=distance((int)n5.x,(int)n5.y,(int)n6.x,(int)n6.y);
+int w12=distance((int)n5.x,(int)n5.y,P->getPlayerLoc().x,P->getPlayerLoc().y);
+int w13=distance((int)n6.x,(int)n6.y,P->getPlayerLoc().x,P->getPlayerLoc().y);
+int graph[V][V] = { { 0, w1, w2, 0, 0, 0, 0, 0 },
+                     { w1, 0, w3, w4, 0, 0, 0, 0 },
+                     { w2, w3, 0, 0, w5, 0, 0, 0 },
+                     { 0, w4, 0, 0, w6, w7, w8, 0 },
+                     { 0, 0, w5, w6, 0, w9, w10, 0 },
+                     { 0, 0, 0, w7, w9, 0, w11, w12},
+                     { 0, 0, 0, w8, w10, w11, 0, w13},
+                     { 0, 0, 0, 0, 0, w12, w13, 0}};
+
+int dist=path->dijkstra(graph,0);*/
+return dist;
+}
+
+int getMin(map<int, int> dist)
+{
+  pair<int, int> min= *min_element(dist.begin(), dist.end(), CompareSecond());
+  return min.first;
+}
+
+void Specialkeys(int key, int x, int y)
+{
+	map<int,int> shortest_dist;
+	for(i=0;i<4;i++)
+{
+    shortest_dist.insert(pair<int, int>(i,getShortestPath(i)));
+    cout<<"\n E"<<i<<" shortest path to player "<<getShortestPath(i)<<endl;
+}
+int closest_enemy=getMin(shortest_dist);
+
+cout<<"\n the closest enemy to the player is "<<closest_enemy;
+    //bool stop = stopPlayer();
+    // Your Code here
+    bool killed = false;
+
+    for(int i=0; i<10; i++){
+        if(E[i].getEnemyLoc().x == P->getPlayerLoc().x && E[i].getEnemyLoc().y == P->getPlayerLoc().y){
+            cout<<"E[i].getEnemyLoc().x: "<<E[i].getEnemyLoc().x<<"E[i].getEnemyLoc().y:  "<<E[i].getEnemyLoc().x<<endl;
+            cout<<"P->getPlayerLoc().x: "<<P->getPlayerLoc().x<<"P->getPlayerLoc().y:  "<<P->getPlayerLoc().x<<endl;
+            killed = true;
+            int enemyN = i;
+            cout<<"enemy killing player: "<<i<<endl;
+            continue;
+        }
+    }
+
+    if(P->getPlayerLoc().x == M->GetChestLoc().x && P->getPlayerLoc().y == M->GetChestLoc().y)
+    {
+        //M->liveChest = false;
+        cout<<"\n"
+            " #####     #    #     # ####### ####### #     # ####### ######\n"
+            "#     #   # #   ##   ## #       #     # #     # #       #     #\n"
+            "#        #   #  # # # # #       #     # #     # #       #     #\n"
+            "#  #### #     # #  #  # #####   #     # #     # #####   ######\n"
+            "#     # ####### #     # #       #     #  #   #  #       #   #\n"
+            "#     # #     # #     # #       #     #   # #   #       #    #\n"
+            " #####  #     # #     # ####### #######    #    ####### #     #\n";
+    }
+    else if(killed)
+    {
+        //P->livePlayer = false;
+        cout<<"\n"
+            " #####     #    #     # ####### ####### #     # ####### ######\n"
+            "#     #   # #   ##   ## #       #     # #     # #       #     #\n"
+            "#        #   #  # # # # #       #     # #     # #       #     #\n"
+            "#  #### #     # #  #  # #####   #     # #     # #####   ######\n"
+            "#     # ####### #     # #       #     #  #   #  #       #   #\n"
+            "#     # #     # #     # #       #     #   # #   #       #    #\n"
+            " #####  #     # #     # ####### #######    #    ####### #     #\n";
+    }
+    int dist = distance(P->getPlayerLoc().x,P->getPlayerLoc().y,E[0].getEnemyLoc().x,E[0].getEnemyLoc().y);
+    switch(key)
+    {
+    case GLUT_KEY_UP:
+         cout<< P->getPlayerLoc().x<< "    "<<P->getPlayerLoc().y<<endl;
+         //if(!stopPlayer(GLUT_KEY_UP))
+         //{
+            P->movePlayer("up");
+            P->checkCollision(W);
+            P->CheckFireCollision(W);
+         //}
+         //if(dist > 5){
+            E[0].moveEnemy("up");
+         //}
+
+         //E[1].moveEnemy("up");
+         //E[2].moveEnemy("up");
+    break;
+
+    case GLUT_KEY_DOWN:
+         cout<< P->getPlayerLoc().x<< "    "<<P->getPlayerLoc().y<<endl;
+         //if(!stopPlayer(GLUT_KEY_DOWN))
+         //{
+            P->movePlayer("down");
+            P->checkCollision(W);
+         //}
+         E[0].moveEnemy("down");
+        // E[1].moveEnemy("down");
+        // E[2].moveEnemy("down");
+    break;
+
+    case GLUT_KEY_LEFT:
+         cout<< P->getPlayerLoc().x<< "    "<<P->getPlayerLoc().y<<endl;
+         //if(!stopPlayer(GLUT_KEY_LEFT))
+         //{
+            P->movePlayer("left");
+            P->checkCollision(W);
+         //}
+         E[0].moveEnemy("left");
+         //E[1].moveEnemy("left");
+         //E[2].moveEnemy("left");
+
+    break;
+
+    case GLUT_KEY_RIGHT:
+         cout<< P->getPlayerLoc().x<< "    "<<P->getPlayerLoc().y<<endl;
+         //if(!stopPlayer(GLUT_KEY_RIGHT))
+         //{
+            P->movePlayer("right");
+            P->checkCollision(W);
+         //}
+         E[0].moveEnemy("right");
+         //E[1].moveEnemy("right");
+         //E[2].moveEnemy("right");
+    break;
+
+   }
+  glutPostRedisplay();
+}
+
+/*void checkEnemyAtLoc(int e)
+{
+    for(int i = 0; i<4; i++)
+    {
+        if( i != e)
+        {
+            if((E[e].getEnemyLoc.x = E[i].getEnemyLoc().x + 1) || ((E[e].getEnemyLoc.x = E[i].getEnemyLoc().x - 1) ||(E[e].getEnemyLoc.y = E[i].getEnemyLoc().y + 1)||(E[e].getEnemyLoc.y = E[i].getEnemyLoc().y + 1))
+        }
+
+    }
+}*/
+
+/* Program entry point */
+
+int main(int argc, char *argv[])
+{
+   glutInit(&argc, argv);
+
+   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+   glutInitWindowSize (800, 800);                //window screen
+   glutInitWindowPosition (100, 100);            //window position
+   glutCreateWindow ("Maze");                    //program title
+   init();
+ cout<<"ABCD"<<endl;
+ cout<<"M->GetChestLoc().x: "<<M->GetChestLoc().x<<endl;
+ cout<<"M->GetChestLoc().y: "<<M->GetChestLoc().y<<endl;
+
+
+   glutDisplayFunc(display);                     //callback function for display
+   glutReshapeFunc(resize);                      //callback for reshape
+   glutKeyboardFunc(key);                        //callback function for keyboard
+   glutSpecialFunc(Specialkeys);
+   glutMouseFunc(mouse);
+   glutIdleFunc(idle);
+   glutMainLoop();
+
+    	//dijkstra(graph, 0); //testing
+
+   return EXIT_SUCCESS;
+}
+
+
+
